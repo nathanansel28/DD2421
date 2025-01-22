@@ -1,0 +1,7 @@
+numpy
+scipy
+scikit-learn
+seaborn
+jupyter
+matplotlib
+PyQt5
