@@ -1,0 +1,13 @@
+Assignment 4
+
+When information gain is maximised, the entropy of the subset is the smallest.
+
+The attribute that gives the greatest information gain should be picked.
+
+Entropy is the measure of uncertainty. Thus, the smaller the entropy of a dataset, 
+the lesser the uncertainty it has.  From equation 3, in order for information gain
+to be maximised, the entropy of the subset must be much smaller value in comparison to
+the entropy of the whole dataset. We can then use information gain to pick the attribute for
+splitting because, the smaller the entropy of the subset, the smaller uncertainty it has
+thus giving greater information gain and a better attribute for splitting.
+

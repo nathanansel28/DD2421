@@ -132,3 +132,4 @@ def allPruned(tree):
             b[v] = r
             alternatives += (TreeNode(tree.attribute, b, tree.default),)
     return alternatives
+
