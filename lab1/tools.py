@@ -4,6 +4,7 @@ from scipy.stats import uniform, norm
 import numpy as np
 import matplotlib.pyplot as plt
 import math 
+import random
 
 
 def calculate_entropy(
@@ -41,6 +42,13 @@ def generate_samples(
     elif type == 'non_uniform': 
         random_samples = np.random.normal(mean, std, size=n)
         return [round(num) for num in random_samples]
+
+
+def partition(data, fraction):
+    ldata = list(data)
+    random.shuffle(ldata)
+    breakPoint = int(len(ldata) * fraction)
+    return ldata[:breakPoint], ldata[breakPoint:]
 
 
 def generate_random_variables(
