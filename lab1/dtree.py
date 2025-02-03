@@ -1,4 +1,5 @@
 import math
+import random
 
 
 def entropy(dataset):
@@ -133,3 +134,9 @@ def allPruned(tree):
             alternatives += (TreeNode(tree.attribute, b, tree.default),)
     return alternatives
 
+
+def partition(data, fraction):
+    ldata = list(data)
+    random.shuffle(ldata)
+    breakPoint = int(len(ldata)*fraction)
+    return ldata[:breakPoint], ldata[breakPoint:]
