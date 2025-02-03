@@ -4,6 +4,7 @@ import dtree
 import sys
 
 from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 
 
@@ -62,12 +63,13 @@ class MyMainWindow( QMainWindow ):
         self.show()
 
 
-def drawTree(tree):
+def drawTree(tree, display_time=10):
     application = QApplication(sys.argv)
     win = MyMainWindow(tree)  
 
     win.show()
-    sys.exit(application.exec_())
+    QTimer.singleShot(display_time*1000, win.close)
+    application.exec_()
 
 
 

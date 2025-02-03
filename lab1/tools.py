@@ -1,6 +1,6 @@
 from typing import Union, Literal, List, Tuple
-
 from scipy.stats import uniform, norm
+import dtree as d
 import numpy as np
 import matplotlib.pyplot as plt
 import math 
@@ -44,44 +44,44 @@ def generate_samples(
         return [round(num) for num in random_samples]
 
 
-def partition(data, fraction):
+def partition(data, fraction, use_seed=False, seed_value=12): 
+    if use_seed:
+        random.seed(seed_value)
     ldata = list(data)
     random.shuffle(ldata)
     breakPoint = int(len(ldata) * fraction)
     return ldata[:breakPoint], ldata[breakPoint:]
 
 
-def generate_random_variables(
-    type: Literal['uniform', 'gaussian']
-): 
-    """Ignore this for now."""
+def prune_tree(initial_tree, validation_data):
+    best_trees = [initial_tree]
+    best_score = d.check(initial_tree, validation_data)
+    
+    while True:
+        new_best_trees = []
+        for tree in best_trees:
+            pruned_trees = list(d.allPruned(tree))
+            if not pruned_trees:
+                continue  # No more pruning possible
+            
+            current_best_score = best_score
+            candidates = []
+            for pruned_tree in pruned_trees:
+                score = d.check(pruned_tree, validation_data)
+                if score > current_best_score:
+                    candidates = [pruned_tree]
+                    current_best_score = score
+                elif score == current_best_score:
+                    candidates.append(pruned_tree)
+            
+            if candidates:
+                new_best_trees = candidates
+                best_score = current_best_score
+        
+        if not new_best_trees:
+            break  # Stop pruning when no improvement is found
+        
+        best_trees = new_best_trees
+    
+    return best_trees[0]
 
-    assert type in ['uniform', 'gaussian']
-
-    fig, ax = plt.subplots(1, 1)
-    x = np.linspace(uniform.ppf(0.01),
-                    uniform.ppf(0.99), 100)
-
-    if type == 'uniform': 
-        ax.plot(x, uniform.pdf(x),
-            'r-', lw=5, alpha=0.6, label='uniform pdf')
-        rv = uniform()
-        ax.plot(x, rv.pdf(x), 'k-', lw=2, label='frozen pdf')
-        r = uniform.rvs(size=1000)
-        print(r)
-
-    elif type == 'gaussian':
-        ax.plot(x, norm.pdf(x),
-            'r-', lw=5, alpha=0.6, label='norm pdf')
-        rv = norm()
-        ax.plot(x, rv.pdf(x), 'k-', lw=2, label='frozen pdf')
-        vals = norm.ppf([0.001, 0.5, 0.999])
-        np.allclose([0.001, 0.5, 0.999], norm.cdf(vals))
-        r = norm.rvs(size=1000)
-
-    ax.hist(r, density=True, bins='auto', histtype='stepfilled', alpha=0.2)
-    ax.set_xlim([x[0], x[-1]])
-    ax.legend(loc='best', frameon=False)
-    plt.show()
-
-    return r
