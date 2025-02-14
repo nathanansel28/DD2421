@@ -82,9 +82,9 @@ class SupportVectorMachine:
         indicator_value: float = np.sum(
             self.alpha * self.y * np.array(
                 [self.kernel(s, self.X[i]) for i in range(self.N)]
-            ) - self.b
-        )
-        return bool(indicator_value)
+            )
+        ) - self.b
+        return 1 if indicator_value > 0 else -1 
 
 
     def predict(
