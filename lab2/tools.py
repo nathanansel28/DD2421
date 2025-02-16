@@ -1,4 +1,4 @@
-from typing import Literal, Union, List, Callable, Optional
+from typing import Literal, Union, List, Callable, Optional, Tuple
 from scipy.optimize import minimize
 
 import matplotlib.pyplot as plt
@@ -14,6 +14,7 @@ class SupportVectorMachine:
         kernel_type: Literal['linear', 'polynomial', 'rbf'],
         degree: Optional[int] = None,
         sigma: Optional[float] = None,
+        randomize_alpha: bool=False
     ):
         """
         SVM implementation from scratch. 
@@ -34,14 +35,16 @@ class SupportVectorMachine:
         self.X: np.ndarray = X
         self.y: np.ndarray = y
         self.N: int = self.X.shape[0]
-        self.alpha: np.ndarray = self._init_alpha()
+        self.alpha: np.ndarray = self._init_alpha(randomize_alpha)
         self.degree = degree if degree is not None else 2
         self.sigma = sigma if sigma is not None else 0.1
         self.kernel: Callable = self._init_kernel(kernel_type)
         self.P_matrix: np.ndarray = self._init_p_matrix()
         
 
-    def fit(self) -> np.ndarray:
+    def fit(
+        self, slack_value: Optional[float]=None
+    ) -> np.ndarray:
         """
         Fits the SVM model by calling `minimize` from scipy.optimize.
         Calculates the support vectors by extracting the nonzero alphas. 
@@ -55,7 +58,7 @@ class SupportVectorMachine:
         self.ret = minimize(
             self._objective,
             self.alpha, 
-            bounds=[(0, None) for b in range(self.N)],
+            bounds=[(0, slack_value) for b in range(self.N)],
             constraints={'type': 'eq', 'fun': self._zerofun} 
         )
 
@@ -72,7 +75,6 @@ class SupportVectorMachine:
         ) - support_target_value
 
         return self.ret['x']
-
 
 
     def _indicator(
@@ -102,6 +104,49 @@ class SupportVectorMachine:
         return float(np.sum(y_actual == y_predict) / y_actual.size)
 
 
+    def plot_decision_boundary(
+        self, 
+        inputs: np.ndarray = None,
+        targets: np.ndarray = None,
+        grid_size: int = 200,
+        fig_size: Tuple[float, float] = (12, 8),
+        plot_title: str='Dataset with SVM Linear Decision Boundary',
+        save_path: Optional[str] = None
+    ) -> None:
+        inputs = self.X if inputs is None else inputs
+        targets = self.y if targets is None else targets
+
+        x_min, x_max = inputs[:, 0].min() - 1, inputs[:, 0].max() + 1
+        y_min, y_max = inputs[:, 1].min() - 1, inputs[:, 1].max() + 1
+        xx, yy = np.meshgrid(
+            np.linspace(x_min, x_max, grid_size), 
+            np.linspace(y_min, y_max, grid_size)
+        )
+        grid_points = np.c_[xx.ravel(), yy.ravel()]
+        Z = self.predict(grid_points)
+        Z = Z.reshape(xx.shape)
+
+        plt.figure(figsize=fig_size)
+        plt.contourf(xx, yy, Z, alpha=0.3, levels=np.linspace(Z.min(), Z.max(), 3), cmap='coolwarm')
+        plt.scatter(inputs[targets == 1][:, 0], inputs[targets == 1][:, 1], color='blue', label='Class A (+1)', edgecolor='k')
+        plt.scatter(inputs[targets == -1][:, 0], inputs[targets == -1][:, 1], color='red', label='Class B (-1)', edgecolor='k')
+
+        plt.scatter(self.X[self.nonzero_alphas][:, 0], self.X[self.nonzero_alphas][:, 1], 
+                    s=100, facecolors='none', edgecolors='k', linewidths=1.5, label='Support Vectors')
+
+        plt.xlabel('Input Feature 1')
+        plt.ylabel('Input Feature 2')
+        plt.title(plot_title)
+        plt.legend()
+        plt.grid(True)
+
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+
+        plt.show()
+
+
+
     def _objective(
         self, alpha: np.ndarray
     ) -> float: 
@@ -116,8 +161,11 @@ class SupportVectorMachine:
         return np.sum(np.dot(alpha, self.y))
 
 
-    def _init_alpha(self) -> np.ndarray: 
-        """Initialize the alpha with zeroes.""" 
+    def _init_alpha(self, randomize: bool=False) -> np.ndarray: 
+        """Initialize the alpha with zeroes OR with random values between (-1, 1).""" 
+        if randomize:
+            np.random.seed(42)
+            return np.random.uniform(-1, 1, self.N)
         return np.zeros(self.N)
 
 
@@ -160,3 +208,114 @@ class SupportVectorMachine:
 
 
 
+def generate_dataset(
+    size: int = 20,
+    classA_mean_1: List[float] = [1.5, 0.5], 
+    classA_mean_2: List[float] = [-1.5, 0.5], 
+    classA_std: float = 0.2, 
+    classB_mean: List[float] = [0.0, -0.5],
+    classB_std: float = 0.2, 
+    fig_size: Tuple[int, int] = (10, 6),
+    seed: int = 100
+) -> Tuple[np.ndarray, np.ndarray]: 
+    """
+    Generates a dataset drawn from a 2D normal distsribution according to the instructions. 
+
+    Returns
+    -------
+    Tuple[inputs, targets]
+        A tuple consisting the inputs and the targets. 
+    """
+    np.random.seed(seed)
+    classA = np.concatenate((
+        np.random.randn(size//2, 2) * classA_std + classA_mean_1,
+        np.random.randn(size//2, 2) * classA_std + classA_mean_2
+    ))
+
+    np.random.seed(seed)
+    classB = np.random.randn(size, 2) * classB_std + classB_mean
+
+    inputs = np.concatenate((classA, classB))
+    targets = np.concatenate((
+        np.ones(classA.shape[0]),
+        -np.ones(classB.shape[0])
+    ))
+
+    np.random.seed(seed)
+    N = inputs.shape[0]
+    permute = list(range(N))
+    random.shuffle(permute)
+
+    inputs = inputs[permute, :]
+    targets = targets[permute]
+
+    plt.figure(figsize=fig_size)
+    plt.scatter(inputs[targets == 1][:, 0], inputs[targets == 1][:, 1], color='blue', label='Class A (+1)')
+    plt.scatter(inputs[targets == -1][:, 0], inputs[targets == -1][:, 1], color='red', label='Class B (-1)')
+    plt.xlabel('Input Feature 1')
+    plt.ylabel('Input Feature 2')
+    plt.title('Dataset Visualization')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    return inputs, targets
+
+
+def generate_nonlinear_dataset(
+    size: int = 100,
+    inner_radius: float = 0.5,
+    outer_radius: float = 1.5,
+    noise: float = 0.1,
+    fig_size: Tuple[int, int] = (10, 6),
+    seed: int = 42
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Generates a non-linear dataset where Class A (positive) is inside Class B (negative),
+    resembling concentric circles.
+
+    Args:
+        size (int): Total number of samples (split equally between classes).
+        inner_radius (float): Radius of Class A (inner circle).
+        outer_radius (float): Radius of Class B (outer ring).
+        noise (float): Standard deviation of noise added to the points.
+        fig_size (Tuple[int, int]): Size of the plot.
+        seed (int): Random seed for reproducibility.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Inputs and targets.
+    """
+    np.random.seed(seed)
+    num_per_class = size // 2
+
+    # Generate Class A (inner circle)
+    angles_A = np.random.uniform(0, 2 * np.pi, num_per_class)
+    radii_A = np.random.normal(inner_radius, noise, num_per_class)
+    classA = np.column_stack((radii_A * np.cos(angles_A), radii_A * np.sin(angles_A)))
+
+    # Generate Class B (outer circle)
+    angles_B = np.random.uniform(0, 2 * np.pi, num_per_class)
+    radii_B = np.random.normal(outer_radius, noise, num_per_class)
+    classB = np.column_stack((radii_B * np.cos(angles_B), radii_B * np.sin(angles_B)))
+
+    # Combine datasets
+    inputs = np.vstack((classA, classB))
+    targets = np.hstack((np.ones(num_per_class), -np.ones(num_per_class)))
+
+    # Shuffle dataset
+    np.random.seed(seed)
+    permute = np.random.permutation(size)
+    inputs, targets = inputs[permute], targets[permute]
+
+    # Plot dataset
+    plt.figure(figsize=fig_size)
+    plt.scatter(inputs[targets == 1][:, 0], inputs[targets == 1][:, 1], color='blue', label='Class A (+1)')
+    plt.scatter(inputs[targets == -1][:, 0], inputs[targets == -1][:, 1], color='red', label='Class B (-1)')
+    plt.xlabel('Input Feature 1')
+    plt.ylabel('Input Feature 2')
+    plt.title('Non-Linear Dataset: Concentric Circles')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    return inputs, targets
