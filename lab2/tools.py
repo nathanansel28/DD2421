@@ -128,8 +128,8 @@ class SupportVectorMachine:
 
         plt.figure(figsize=fig_size)
         plt.contourf(xx, yy, Z, alpha=0.3, levels=np.linspace(Z.min(), Z.max(), 3), cmap='coolwarm')
-        plt.scatter(inputs[targets == 1][:, 0], inputs[targets == 1][:, 1], color='blue', label='Class A (+1)', edgecolor='k')
-        plt.scatter(inputs[targets == -1][:, 0], inputs[targets == -1][:, 1], color='red', label='Class B (-1)', edgecolor='k')
+        plt.scatter(inputs[targets == 1][:, 0], inputs[targets == 1][:, 1], color='red', label='Class A (+1)', edgecolor='k')
+        plt.scatter(inputs[targets == -1][:, 0], inputs[targets == -1][:, 1], color='blue', label='Class B (-1)', edgecolor='k')
 
         plt.scatter(self.X[self.nonzero_alphas][:, 0], self.X[self.nonzero_alphas][:, 1], 
                     s=100, facecolors='none', edgecolors='k', linewidths=1.5, label='Support Vectors')
