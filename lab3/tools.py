@@ -155,7 +155,7 @@ def trainBoost(
     X: np.ndarray, 
     labels: np.ndarray, 
     T: int = 10
-):
+) -> Tuple[Union[BayesClassifier, BoostClassifier], List[np.ndarray]]:
     # these will come in handy later on
     Npts, Ndims = np.shape(X)
 
@@ -212,14 +212,12 @@ def classifyBoost(
         return classifiers[0].classify(X)
     else:
         votes = np.zeros((Npts,Nclasses))
+        for t in range(Ncomps):
+            predictions = classifiers[t].classify(X)  # Get predictions from classifier t
+            for i in range(Npts):
+                votes[i, predictions[i]] += alphas[t]  # Add weighted vote
+        yPred = np.argmax(votes, axis=1)
 
-        # TODO: implement classificiation when we have trained several classifiers!
-        # here we can do it by filling in the votes vector with weighted votes
-        # ==========================
-        
-        # ==========================
+        return yPred
 
-        # one way to compute yPred after accumulating the votes
-        return np.argmax(votes,axis=1)
-    
 
