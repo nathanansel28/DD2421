@@ -51,7 +51,7 @@ ASSIGNMENT 1
 # out:    mu - C x d matrix of class means (mu[i] - class i mean)
 #      sigma - C x d x d matrix of class covariances (sigma[i] - class i sigma)
 def mlParams(
-    X: np.ndarray, labels: np.ndarray, W=None
+    X: np.ndarray, labels: np.ndarray, W: Optional[np.ndarray] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """ Calculates and returns the ML-estimates of the mu and sigma of a dataset. """
 
@@ -93,7 +93,7 @@ ASSIGNMENT 2
 # in: labels - N vector of class labels
 # out: prior - C x 1 vector of class priors
 def computePrior(
-    labels: np.ndarray, W=None
+    labels: np.ndarray, W: Optional[np.ndarray] = None
 ) -> np.ndarray:
     """ Estimates and returns the class prior in X (ignore the W argument). """
     Npts = labels.shape[0]
@@ -154,7 +154,7 @@ def trainBoost(
     base_classifier: Union[BayesClassifier, BoostClassifier], 
     X: np.ndarray, 
     labels: np.ndarray, 
-    T: int =10
+    T: int = 10
 ):
     # these will come in handy later on
     Npts, Ndims = np.shape(X)
@@ -172,12 +172,24 @@ def trainBoost(
         # do classification for each point
         vote = classifiers[-1].classify(X)
 
-        # TODO: Fill in the rest, construct the alphas etc.
-        # ==========================
-        # alpha = 
-        # alphas.append(alpha) # you will need to append the new alpha
-        # ==========================
+        incorrect = (vote != labels).astype(float)
+        error = np.sum(wCur.flatten() * incorrect) / np.sum(wCur)
+
+        # Avoid division errors or log issues
+        if error == 0:
+            error = 1e-10
+        elif error == 1:
+            error = 1 - 1e-10
+
+        alpha = 0.5 * (np.log((1 - error) / error))
+        alphas.append(alpha)
+
+        # Update sample weights
+        wCur = wCur * np.exp(alpha * incorrect[:, np.newaxis])
         
+        # Normalize weights
+        wCur /= np.sum(wCur)
+
     return classifiers, alphas
 
 
@@ -186,7 +198,12 @@ def trainBoost(
 #      alphas - (maximum) length T Python list of vote weights
 #    Nclasses - the number of different classes
 # out:  yPred - N vector of class predictions for test points
-def classifyBoost(X, classifiers, alphas, Nclasses):
+def classifyBoost(
+    X: np.ndarray, 
+    classifiers: List[Union[BayesClassifier, BoostClassifier]], 
+    alphas: List[float], 
+    Nclasses: int
+):
     Npts = X.shape[0]
     Ncomps = len(classifiers)
 
