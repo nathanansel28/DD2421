@@ -46,7 +46,6 @@ class BoostClassifier(object):
 ASSIGNMENT 1
 ============
 """
-# NOTE: you do not need to handle the W argument for this part!
 # in:      X - N x d matrix of N data points
 #     labels - N vector of class labels
 # out:    mu - C x d matrix of class means (mu[i] - class i mean)
@@ -73,10 +72,15 @@ def mlParams(
     mu /= counts[:, None]
 
     for idx, k in enumerate(classes):
-        X_k = X[labels == k]
-        N_k = X_k.shape[0]
+        mask = labels == k
+        W_k = W[mask]
+        X_k = X[mask]
+        
+        W_k_sum = np.sum(W_k)
+        mu[idx] = np.sum(W_k * X_k, axis=0) / W_k_sum
+        
         diff = X_k - mu[idx]
-        sigma[idx] = (diff.T @ diff) / N_k
+        sigma[idx] = np.diag(np.sum(W_k * (diff ** 2), axis=0) / W_k_sum)
 
     return mu, sigma
 
@@ -86,7 +90,6 @@ def mlParams(
 ASSIGNMENT 2
 ============
 """
-# NOTE: you do not need to handle the W argument for this part!
 # in: labels - N vector of class labels
 # out: prior - C x 1 vector of class priors
 def computePrior(
@@ -95,16 +98,16 @@ def computePrior(
     """ Estimates and returns the class prior in X (ignore the W argument). """
     Npts = labels.shape[0]
     if W is None:
-        W = np.ones((Npts,1))/Npts
+        W = np.ones((Npts, 1))/Npts
     else:
         assert(W.shape[0] == Npts)
     classes = np.unique(labels)
     Nclasses = np.size(classes)
 
-    prior = np.zeros((Nclasses,1))
-    prior = np.array([
-        len(labels[labels==k]) / Npts for k in np.unique(labels)
-    ])
+    prior = np.zeros((Nclasses, 1))
+    for idx, k in enumerate(classes):
+        mask = labels == k
+        prior[idx] = np.sum(W[mask]) / np.sum(W)
     
     return prior
 
@@ -141,8 +144,6 @@ def classifyBayes(
 ASSIGNMENT 4
 ============
 """
-
-
 # in: base_classifier - a classifier of the type that we will boost, e.g. BayesClassifier
 #                   X - N x d matrix of N data points
 #              labels - N vector of class labels
@@ -173,7 +174,7 @@ def trainBoost(
 
         # TODO: Fill in the rest, construct the alphas etc.
         # ==========================
-        
+        # alpha = 
         # alphas.append(alpha) # you will need to append the new alpha
         # ==========================
         
